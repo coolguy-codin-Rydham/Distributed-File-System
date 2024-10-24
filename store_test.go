@@ -43,10 +43,68 @@ func TestStoreDeleteKey(t *testing.T) {
 }
 
 func TestStore(t *testing.T) {
-	opts := StoreOpts{
-		PathTransformFunc: CASPathTransformFunc,
+
+	s := newStore()
+
+	key := "momsSpecials1"
+	data := []byte("Some jgp bytes")
+
+	if err := s.writeStream(key, bytes.NewReader(data)); err != nil {
+		t.Error(err)
 	}
-	s := NewStore(opts)
+
+	if ok := s.Has(key); !ok {
+		t.Errorf("expected to have key %s", key)
+	}
+
+	r, err := s.Read(key)
+	if err != nil {
+		t.Error(err)
+	}
+	b, _ := io.ReadAll(r)
+
+	if string(b) != string(data) {
+		t.Errorf("want %s have %s", data, b)
+	}
+
+	fmt.Println("Test Passed")
+}
+
+func TestStoreWithDelete(t *testing.T) {
+
+	s := newStore()
+
+	key := "momsSpecials1"
+	data := []byte("Some jgp bytes")
+
+	if err := s.writeStream(key, bytes.NewReader(data)); err != nil {
+		t.Error(err)
+	}
+
+	if ok := s.Has(key); !ok {
+		t.Errorf("expected to have key %s", key)
+	}
+
+	r, err := s.Read(key)
+	if err != nil {
+		t.Error(err)
+	}
+	b, _ := io.ReadAll(r)
+
+	if string(b) != string(data) {
+		t.Errorf("want %s have %s", data, b)
+	}
+	s.Delete(key)
+
+	fmt.Println("Test Passed")
+}
+
+func TestStoreWithTeardown(t *testing.T) {
+
+	s := newStore()
+
+	defer teardown(t, s)
+
 	key := "momsSpecials1"
 	data := []byte("Some jgp bytes")
 
@@ -73,4 +131,17 @@ func TestStore(t *testing.T) {
 	s.Delete(key)
 
 	fmt.Println("Test Passed")
+}
+
+func newStore() *Store {
+	opts := StoreOpts{
+		PathTransformFunc: CASPathTransformFunc,
+	}
+	return NewStore(opts)
+}
+
+func teardown(t *testing.T, s *Store) {
+	if err := s.clear(); err != nil {
+		t.Error(err)
+	}
 }
