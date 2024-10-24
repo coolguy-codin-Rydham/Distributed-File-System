@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"os"
 	"strings"
 )
 
-const defaultRootFolderName = "ggnetwork"
+const defaultRootFolderName = "mernerpvt"
 
 func CASPathTransformFunc(key string) PathKey {
 	hash := sha1.Sum([]byte(key))
@@ -55,7 +55,7 @@ func (p PathKey) FirstPathName() string {
 }
 
 func (p PathKey) FullPath() string {
-	fmt.Println("I am in function")
+	// fmt.Println("I am in function")
 	return fmt.Sprintf("%s%s", p.PathName, p.FileName)
 }
 
@@ -91,9 +91,14 @@ func NewStore(opts StoreOpts) *Store {
 func (s *Store) Has(key string) bool {
 	PathKey := s.PathTransformFunc(key)
 
-	_, err := os.Stat(PathKey.FullPath())
+	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, PathKey.FullPath())
 
-	return err != fs.ErrNotExist
+	_, err := os.Stat(fullPathWithRoot)
+
+	if errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	return true
 
 }
 
@@ -104,11 +109,9 @@ func (s *Store) Delete(key string) error {
 		log.Printf("Deleted [%s] from disk", pathKey.FileName)
 	}()
 
-	// if err := os.RemoveAll(pathKey.FullPath()); err != nil {
-	// 	return err
-	// }
+	firstPathName := fmt.Sprintf("%s/%s", s.Root, pathKey.FirstPathName())
 
-	return os.RemoveAll(pathKey.FirstPathName())
+	return os.RemoveAll(firstPathName)
 }
 
 func (s *Store) Read(key string) (io.Reader, error) {
@@ -125,9 +128,8 @@ func (s *Store) Read(key string) (io.Reader, error) {
 
 func (s *Store) readStream(key string) (io.ReadCloser, error) {
 	pathKey := s.PathTransformFunc(key)
-
-	return os.Open(pathKey.FullPath())
-
+	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
+	return os.Open(fullPathWithRoot)
 }
 
 func (s *Store) writeStream(key string, r io.Reader) error {

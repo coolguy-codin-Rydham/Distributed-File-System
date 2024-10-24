@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"testing"
 )
 
@@ -37,6 +38,8 @@ func TestStoreDeleteKey(t *testing.T) {
 	if err := s.Delete(key); err != nil {
 		t.Error(err)
 	}
+
+	fmt.Println("Test Passed")
 }
 
 func TestStore(t *testing.T) {
@@ -44,26 +47,30 @@ func TestStore(t *testing.T) {
 		PathTransformFunc: CASPathTransformFunc,
 	}
 	s := NewStore(opts)
-	key := "momsSpecials"
+	key := "momsSpecials1"
 	data := []byte("Some jgp bytes")
 
 	if err := s.writeStream(key, bytes.NewReader(data)); err != nil {
 		t.Error(err)
 	}
 
-	// r, err := s.Read(key)
-	// if err != nil {
-	// 	t.Error(err)
-	// }
-	// b, _ := io.ReadAll(r)
+	if ok := s.Has(key); !ok {
+		t.Errorf("expected to have key %s", key)
+	}
 
-	// fmt.Println(string(b))
+	r, err := s.Read(key)
+	if err != nil {
+		t.Error(err)
+	}
+	b, _ := io.ReadAll(r)
 
-	// if string(b) != string(data) {
-	// 	t.Errorf("want %s have %s", data, b)
-	// }
+	if string(b) != string(data) {
+		t.Errorf("want %s have %s", data, b)
+	}
 
-	// s.Delete(key)
+	// fmt.Printf("%s\n", string(b))
+
+	s.Delete(key)
 
 	fmt.Println("Test Passed")
 }
